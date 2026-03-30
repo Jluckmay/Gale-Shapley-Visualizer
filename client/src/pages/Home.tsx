@@ -23,7 +23,7 @@ const translations = {
     navAbout: "Sobre",
     navHowItWorks: "Como Funciona",
     navDemo: "Executar",
-    navFeatures: "Features",
+    navFeatures: "Recursos",
     navTech: "Tecnologias",
     // Hero
     heroBadge: "ALGORITHM VISUALIZER",
@@ -130,7 +130,7 @@ const translations = {
   en: {
     navAbout: "About",
     navHowItWorks: "How It Works",
-    navDemo: "Executar",
+    navDemo: "Run it",
     navFeatures: "Features",
     navTech: "Technologies",
     heroBadge: "ALGORITHM VISUALIZER",

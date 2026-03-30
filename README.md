@@ -36,7 +36,7 @@ To set up and run the project on your local machine, follow these steps:
 
 1.  **Clone o repositório (Clone the repository)**:
     ```bash
-    git clone https://github.com/jluckmay/Gale-Shapley-Visualizer.git
+    git clone [https://github.com/jluckmay/Gale-Shapley-Visualizer.git](https://github.com/jluckmay/Gale-Shapley-Visualizer.git)
     cd Gale-Shapley-Visualizer
     ```
 
@@ -81,16 +81,16 @@ To set up and run the project on your local machine, follow these steps:
     npm run dev
     ```
 
-    A aplicação estará disponível em `http://localhost:5173` (ou outra porta disponível).
-    The application will be available at `http://localhost:5173` (or another available port).
+    A aplicação estará disponível em [`http://localhost:5173`](http://localhost:5173) (ou outra porta disponível).
+    The application will be available at [`http://localhost:5173`](http://localhost:5173) (or another available port).
 
 ## GitHub Pages (How to Deploy on GitHub Pages)
 
 Este projeto está configurado para executar facilmente no GitHub Pages.
-A página do projeto está acessível em `https://jluckmay.github.io/Gale-Shapley-Visualizer/`.
+A página do projeto está acessível em [`https://jluckmay.github.io/Gale-Shapley-Visualizer/`](https://jluckmay.github.io/Gale-Shapley-Visualizer/).
 
 This project is configured for run easy on GitHub Pages. 
-The project webpage is accessible at `https://jluckmay.github.io/Gale-Shapley-Visualizer/`.
+The project webpage is accessible at [`https://jluckmay.github.io/Gale-Shapley-Visualizer/`](https://jluckmay.github.io/Gale-Shapley-Visualizer/).
 
 ## Licença (License)
 

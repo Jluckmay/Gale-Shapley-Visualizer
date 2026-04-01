@@ -88,6 +88,9 @@ const translations = {
     demoFormatDesc: "O arquivo deve conter as preferências dos proponentes, seguidas de uma linha separadora (---), e depois as preferências dos aceitadores. Cada linha contém os índices separados por espaço.",
     demoFormatExample: "0 1 2\n1 0 2\n2 0 1\n---\n0 1 2\n1 2 0\n2 1 0",
     demoFormatLabel: "Exemplo para N=3:",
+    demoAllStableBtn: "Encontrar Todos os Estáveis",
+    demoAllStableTitle: "Todos os Emparelhamentos Estáveis Possíveis",
+    demoAllStableCount: "Encontrados {count} emparelhamentos estáveis.",
     // Features
     featSection: "04 — FUNCIONALIDADES",
     featTitle: "Tudo que Você Precisa",
@@ -192,6 +195,9 @@ const translations = {
     demoFormatDesc: "The file must contain proposer preferences, followed by a separator line (---), then acceptor preferences. Each line contains space-separated indices.",
     demoFormatExample: "0 1 2\n1 0 2\n2 0 1\n---\n0 1 2\n1 2 0\n2 1 0",
     demoFormatLabel: "Example for N=3:",
+    demoAllStableBtn: "Find All Stable",
+    demoAllStableTitle: "All Possible Stable Matchings",
+    demoAllStableCount: "Found {count} stable matchings.",
     featSection: "04 — FEATURES",
     featTitle: "Everything You Need",
     featDesc: "A complete tool to explore, learn, and teach the stable matching algorithm.",
@@ -292,6 +298,70 @@ function galeShapley(proposerPrefs: number[][], acceptorPrefs: number[][]): Matc
   pairs.sort((x, y) => x[0] - y[0]);
 
   return { pairs, steps };
+}
+
+function findAllStableMatchings(proposerPrefs: number[][], acceptorPrefs: number[][]): [number, number][][] {
+  const n = proposerPrefs.length;
+  const allMatchings: [number, number][][] = [];
+
+  const acceptorRanks: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+  for (let a = 0; a < n; a++) {
+    for (let rank = 0; rank < n; rank++) {
+      acceptorRanks[a][acceptorPrefs[a][rank]] = rank;
+    }
+  }
+
+  const proposerRanks: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+  for (let p = 0; p < n; p++) {
+    for (let rank = 0; rank < n; rank++) {
+      proposerRanks[p][proposerPrefs[p][rank]] = rank;
+    }
+  }
+
+  function isStable(matching: number[]): boolean {
+    for (let p = 0; p < n; p++) {
+      const aCurrent = matching[p];
+      const pRankCurrent = proposerRanks[p][aCurrent];
+
+      for (let rank = 0; rank < pRankCurrent; rank++) {
+        const aBetter = proposerPrefs[p][rank];
+        let pCurrentOfABetter = -1;
+        for (let pOther = 0; pOther < n; pOther++) {
+          if (matching[pOther] === aBetter) {
+            pCurrentOfABetter = pOther;
+            break;
+          }
+        }
+
+        if (acceptorRanks[aBetter][p] < acceptorRanks[aBetter][pCurrentOfABetter]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function backtrack(p: number, currentMatching: number[], usedAcceptors: Set<number>) {
+    if (p === n) {
+      if (isStable(currentMatching)) {
+        const pairs: [number, number][] = currentMatching.map((a, pIdx) => [pIdx, a]);
+        allMatchings.push(pairs);
+      }
+      return;
+    }
+
+    for (let a = 0; a < n; a++) {
+      if (!usedAcceptors.has(a)) {
+        currentMatching[p] = a;
+        usedAcceptors.add(a);
+        backtrack(p + 1, currentMatching, usedAcceptors);
+        usedAcceptors.delete(a);
+      }
+    }
+  }
+
+  backtrack(0, Array(n).fill(-1), new Set());
+  return allMatchings;
 }
 
 // ===== COMPONENTE SVG DO GRAFO =====
@@ -450,6 +520,8 @@ export default function Home() {
   const [proposerPrefs, setProposerPrefs] = useState<number[][]>([[0, 1, 2], [1, 0, 2], [2, 0, 1]]);
   const [acceptorPrefs, setAcceptorPrefs] = useState<number[][]>([[0, 1, 2], [1, 2, 0], [2, 1, 0]]);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [allStableMatchings, setAllStableMatchings] = useState<[number, number][][] | null>(null);
+  const [showAllStableModal, setShowAllStableModal] = useState(false);
 
   // Scroll animations
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
@@ -716,9 +788,20 @@ export default function Home() {
     intervalRef.current = null;
     setDemoRunning(false);
     setDemoResult(null);
+    setAllStableMatchings(null);
     setCurrentStep(0);
     handleNChange(3);
   }, [handleNChange]);
+
+  const runFindAllStable = useCallback(() => {
+    if (!validatePrefs(proposerPrefs) || !validatePrefs(acceptorPrefs)) {
+      showNotification('error', t.demoImportError);
+      return;
+    }
+    const results = findAllStableMatchings(proposerPrefs, acceptorPrefs);
+    setAllStableMatchings(results);
+    setShowAllStableModal(true);
+  }, [proposerPrefs, acceptorPrefs, validatePrefs, showNotification, t]);
 
   const getActionLabel = useCallback((action: string) => {
     switch (action) {
@@ -1156,6 +1239,16 @@ export default function Home() {
                       </Button>
                     )}
                   </div>
+
+                  <Button
+                    onClick={runFindAllStable}
+                    disabled={demoRunning}
+                    variant="outline"
+                    className="w-full h-10 rounded-xl border-primary/20 text-primary/80 hover:bg-primary/5 text-sm"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    {t.demoAllStableBtn}
+                  </Button>
                 </div>
 
                 {/* Passos da execução */}
@@ -1329,7 +1422,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* ===== INSTALL MODAL ===== */}
       {showInstallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -1341,15 +1433,15 @@ export default function Home() {
                 </h2>
                 <button
                   onClick={() => setShowInstallModal(false)}
-                  className="p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                  className="p-2 rounded-lg hover:bg-secondary/80 transition-colors"
                 >
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {installSteps.map((item, idx) => (
-                  <div key={idx} className="flex gap-4 items-start">
+                  <div key={idx} className="flex gap-4 items-start p-5 rounded-xl bg-card border border-border/50 card-elevated">
                     <span className="w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center flex-shrink-0 font-mono">
                       {item.step}
                     </span>
@@ -1362,35 +1454,111 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-              <div className="mt-8 p-5 rounded-xl bg-primary/5 border border-primary/15">
-                <div className="flex items-start gap-3">
-                  <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground mb-1">{t.installPrereqTitle}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {t.installPrereqDesc} <code className="font-mono text-primary bg-primary/5 px-1.5 py-0.5 rounded">npm install -g pnpm</code>
-                    </p>
-                  </div>
+      {/* ===== ALL STABLE MATCHINGS MODAL ===== */}
+      {showAllStableModal && allStableMatchings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto border-border/50">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-serif)' }}>
+                    {t.demoAllStableTitle}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t.demoAllStableCount.replace('{count}', allStableMatchings.length.toString())}
+                  </p>
                 </div>
+                <button
+                  onClick={() => setShowAllStableModal(false)}
+                  className="p-2 rounded-lg hover:bg-secondary/80 transition-colors"
+                >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
               </div>
 
-              <div className="mt-8 flex gap-3">
-                <Button
-                  onClick={() => setShowInstallModal(false)}
-                  variant="outline"
-                  className="flex-1 h-10 rounded-lg"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {allStableMatchings.map((matching, idx) => (
+                  <div key={idx} className="p-6 rounded-xl bg-card border border-border/50 card-elevated">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">
+                        Matching #{idx + 1}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {matching.map(([p, a], pIdx) => (
+                        <div key={pIdx} className="px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 text-xs font-mono">
+                          <span className="text-primary font-bold">P{p}</span>
+                          <span className="mx-1 text-muted-foreground">↔</span>
+                          <span className="text-foreground font-bold">A{a}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-border/30">
+                      <MatchingGraph pairs={matching} n={n} animated={false} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ===== ALL STABLE MATCHINGS MODAL ===== */}
+      {showAllStableModal && allStableMatchings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto border-border/50">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-serif)' }}>
+                    {t.demoAllStableTitle}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t.demoAllStableCount.replace('{count}', allStableMatchings.length.toString())}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAllStableModal(false)}
+                  className="p-2 rounded-lg hover:bg-secondary/80 transition-colors"
                 >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {allStableMatchings.map((matching, idx) => (
+                  <div key={idx} className="p-6 rounded-xl bg-card border border-border/50 card-elevated">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">
+                        Matching #{idx + 1}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {matching.map(([p, a], pIdx) => (
+                        <div key={pIdx} className="px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 text-xs font-mono">
+                          <span className="text-primary font-bold">P{p}</span>
+                          <span className="mx-1 text-muted-foreground">↔</span>
+                          <span className="text-foreground font-bold">A{a}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-border/30">
+                      <MatchingGraph pairs={matching} n={n} animated={false} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Botão de Fechar o Modal de Todos os Estáveis */}
+              <div className="mt-8">
+                <Button onClick={() => setShowAllStableModal(false)} className="w-full h-12 rounded-xl">
                   {lang === 'pt' ? 'Fechar' : 'Close'}
-                </Button>
-                <Button
-                  asChild
-                  className="flex-1 btn-teal h-10 rounded-lg"
-                >
-                  <a href="https://github.com/jluckmay/Gale-Shapley-Visualizer" target="_blank" rel="noopener noreferrer">
-                    <Github className="h-4 w-4 mr-2" />
-                    {lang === 'pt' ? 'Ver no GitHub' : 'View on GitHub'}
-                  </a>
                 </Button>
               </div>
             </CardContent>
